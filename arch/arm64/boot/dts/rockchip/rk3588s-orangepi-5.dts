@@ -8,15 +8,10 @@
 
 #include "rk3588s-orangepi-5.dtsi"
 #include "rk3588-linux.dtsi"
-#include "rk3588s-orangepi-5-lcd.dtsi"
-
-#include "rk3588s-orangepi-5-camera1.dtsi"
-#include "rk3588s-orangepi-5-camera2.dtsi"
-#include "rk3588s-orangepi-5-camera3.dtsi"
 
 / {
-	model = "Orange Pi 5";
-	compatible = "rockchip,rk3588s-orangepi-5", "rockchip,rk3588";
+	model = "FIYI F12";
+	compatible = "rockchip,rk3588s-fiyi-f12", "rockchip,rk3588";
 
 	vcc_3v3_sd_s0: vcc-3v3-sd-s0 {
 		compatible = "regulator-fixed";
@@ -54,59 +49,66 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	leds: gpio-leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 =<&leds_gpio>;
+	wireless_bluetooth: wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+		clocks = <&hym8563>;
+		clock-names = "ext_clock";
+		uart_rts_gpios = <&gpio3 RK_PD2 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default", "rts_gpio";
+		pinctrl-0 = <&uart9m2_rtsn>,  <&bt_reset_gpio>, <&bt_wake_gpio>, <&bt_irq_gpio>;
+		pinctrl-1 = <&uart9_gpios>;
+		BT,reset_gpio    = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+		BT,wake_gpio     = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+		BT,wake_host_irq = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
 		status = "okay";
-
-		led@1 {
-			gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_HIGH>;
-			label = "status_led";
-			linux,default-trigger = "heartbeat";
-			linux,default-trigger-delay-ms = <0>;
-		};
 	};
 
-	fan: pwm-fan {
-		compatible = "pwm-fan";
-		#cooling-cells = <2>;
-		pwms = <&pwm12 0 50000 0>;
-		cooling-levels = <0 50 100 150 200 255>;
-		rockchip,temp-trips = <
-			50000   1
-			55000   2
-			60000   3
-			65000   4
-			70000   5
-		>;
-
+	wireless_wlan: wireless-wlan {
+		compatible = "wlan-platdata";
+		wifi_chip_type = "ap6275p";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_host_wake_irq &wifi_poweren_gpio>;
+		WIFI,host_wake_irq = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio0 RK_PC7 GPIO_ACTIVE_HIGH>;
 		status = "okay";
+	};
+
+	vibrator {
+		compatible = "rk-vibrator-gpio";
+		status = "okay";
+		vibrator-gpio = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
 	};
 };
+&pinctrl{
+		wireless-bluetooth {
 
-&gmac1 {
-	/* Use rgmii-rxid mode to disable rx delay inside Soc */
-	phy-mode = "rgmii-rxid";
-	clock_in_out = "output";
+			bt_reset_gpio: bt-reset-gpio {
+				rockchip,pins = <0 RK_PD4 0 &pcfg_pull_none>;
+			};
 
-	snps,reset-gpio = <&gpio3 RK_PB2 GPIO_ACTIVE_LOW>;
-	snps,reset-active-low;
-	/* Reset time is 20ms, 100ms for rtl8211f */
-	snps,reset-delays-us = <0 20000 100000>;
+			bt_wake_gpio: bt-wake-gpio {
+				rockchip,pins = <0 RK_PC6 0 &pcfg_pull_up>;
+			};
 
-	pinctrl-names = "default";
-	pinctrl-0 = <&gmac1_miim
-	             &gmac1_tx_bus2
-	             &gmac1_rx_bus2
-	             &gmac1_rgmii_clk
-	             &gmac1_rgmii_bus>;
+			bt_irq_gpio: bt-wake-host-irq {
+				rockchip,pins = <0 RK_PC5 0 &pcfg_pull_down>;
+			};
 
-	tx_delay = <0x42>;
-	/* rx_delay = <0x3f>; */
+			uart9_gpios: uart9-gpios {
+				rockchip,pins = <3 RK_PD2 0 &pcfg_pull_none>;
+			};
+		};
 
-	phy-handle = <&rgmii_phy1>;
-	status = "okay";
+		wireless-wlan {
+
+			wifi_host_wake_irq: wifi-host-wake-irq {
+				rockchip,pins = <0 RK_PA0 0 &pcfg_pull_down>;
+			};
+
+			wifi_poweren_gpio: wifi-poweren-gpio {
+				rockchip,pins = <0 RK_PC7 0 &pcfg_pull_up>;
+			};
+		};
 };
 
 &mdio1 {
@@ -116,41 +118,13 @@
 	};
 };
 
-&hdmi0 {
-	enable-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
-	cec-enable;
-	status = "okay";
-};
 
-&hdmi0_in_vp0 {
+&i2s0_8ch {
 	status = "okay";
-};
-
-&hdmi0_sound {
-	status = "okay";
-};
-
-&hdptxphy_hdmi0 {
-	status = "okay";
-};
-
-&route_hdmi0{
-	status = "okay";
-};
-
-&i2s5_8ch {
-	status = "okay";
-};
-
-&i2s1_8ch {
-	status = "okay";
-	rockchip,i2s-tx-route = <3 2 1 0>;
-	rockchip,i2s-rx-route = <1 3 2 0>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2s1m0_sclk
-	             &i2s1m0_lrck
-	             &i2s1m0_sdi1
-	             &i2s1m0_sdo3>;
+	pinctrl-0 = <&i2s0_lrck
+	             &i2s0_sclk
+	             &i2s0_sdi0
+	             &i2s0_sdo0>;
 };
 
 &i2c0 {
@@ -230,18 +204,6 @@
 	pinctrl-0 = <&uart1m1_xfer>;
 };
 
-&pwm12 {
-	status = "okay";
-	pinctrl-names = "active";
-	pinctrl-0 = <&pwm12m1_pins>;
-};
-
-&pwm13 {
-	status = "disabled";
-	pinctrl-names = "active";
-	pinctrl-0 = <&pwm13m2_pins>;
-};
-
 /*
    pin7: GPIO1_C6
 */
@@ -303,9 +265,50 @@
 };
 
 &i2c3 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&i2c3m0_xfer>;
+	pinctrl-0 = <&i2c3m1_xfer>;
+
+	ak8963@f {
+		compatible = "ak8963";
+		irq_enable = <0x00>;
+		layout = <0x05>;
+		poll_delay_ms = <0x1e>;
+		reg = <0x0f>;
+		reprobe_en = <0x01>;
+		status = "okay";
+		type = <0x03>;
+	};
+
+	mpu_acc@68 {
+		compatible = "mpu6500_acc";
+		irq-gpio = <&gpio1 RK_PD3 0x01>;
+		irq_enable = <0x00>;
+		layout = <0x07>;
+		pinctrl-0 = <&mpu_en>;
+		pinctrl-names = "default";
+		poll_delay_ms = <0x1e>;
+		reg = <0x68>;
+		status = "okay";
+		type = <0x02>;
+	};
+
+	mpu_gyro@68 {
+		compatible = "mpu6500_gyro";
+		layout = <0x07>;
+		poll_delay_ms = <0x1e>;
+		reg = <0x68>;
+		status = "okay";
+		type = <0x04>;
+	};
+};
+
+&pinctrl {
+	mpuen {
+		mpu_en: mpu_en {
+			rockchip,pins = <3 RK_PC3 0 &pcfg_pull_up>;
+		};
+	};
 };
 
 &uart3 {
@@ -369,45 +372,6 @@
 	status = "okay";
 };
 
-&sfc {
-	status = "okay";
-	max-freq = <100000000>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&fspim0_pins>;
-
-	spi_flash: spi-flash@0 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "jedec,spi-nor";
-		reg = <0x0>;
-		spi-max-frequency = <100000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <4>;
-		status = "okay";
-
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			loader@0 {
-				label = "loader";
-				reg = <0x0 0x1000000>;
-			};
-		};
-	};
-};
-
-&mipi_dcphy0 {
-	status = "okay";
-};
-
-&mipi_dcphy1 {
-	status = "okay";
-};
-
 &rkcif {
 	status = "okay";
 };
@@ -430,12 +394,6 @@
 
 &isp1_mmu {
 	status = "okay";
-};
-
-&sata0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&sata_reset>;
-	status = "disabled";
 };
 
 &pcie2x1l2 {

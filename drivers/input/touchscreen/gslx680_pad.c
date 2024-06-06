@@ -108,6 +108,7 @@ struct gsl_ts {
     struct workqueue_struct *wq;
     struct gsl_ts_data *dd;
     u8 *touch_data;
+    // u8 *touch_data2;
     u8 device_id;
     int irq;
     int irq_pin;
@@ -700,6 +701,7 @@ static void gslX680_ts_worker(struct work_struct *work)
     struct gsl_touch_info cinfo = {{0}};
 #endif
     struct gsl_ts *ts = container_of(work, struct gsl_ts,work);
+    // char printable[44*2+1]={0};
 
 #ifdef TPD_PROC_DEBUG
     if(gsl_proc_flag == 1)
@@ -714,6 +716,21 @@ static void gslX680_ts_worker(struct work_struct *work)
         startup_chip(ts->client);
         goto schedule;
     }
+    // msleep(4);
+    // rc = gsl_ts_read(ts->client, 0x80, ts->touch_data2, ts->dd->data_size);
+    // if (rc < 0)
+    // {
+    //     dev_err(&ts->client->dev, "read failed\n");
+    //     reset_chip(ts->client);
+    //     startup_chip(ts->client);
+    //     goto schedule;
+    // }
+    // touches = 0;
+    // if(memcmp(ts->touch_data,ts->touch_data2,ts->dd->data_size)!=0)
+    //     goto schedule;
+    // for(i=0; i<44; i++)
+    //     sprintf(printable,"%s%02x",printable,ts->touch_data2[i]);
+    // dev_err(&ts->client->dev, "data:%s\n",printable);
 
     touches = ts->touch_data[ts->dd->touch_index];
 #ifdef GSL_NOID_VERSION
@@ -725,6 +742,9 @@ static void gslX680_ts_worker(struct work_struct *work)
         cinfo.y[i] = join_bytes(ts->touch_data[ts->dd->y_index + 4 * i + 1],
                 ts->touch_data[ts->dd->y_index + 4 * i ]);
         cinfo.id[i] = ((ts->touch_data[ts->dd->x_index  + 4 * i + 1] & 0xf0)>>4);
+        // dev_err(&ts->client->dev, "finger:%d x:%d,y:%d,id:%d\n", i,cinfo.x[i],cinfo.y[i],
+        // cinfo.id[i]
+        // );
     }
     cinfo.finger_num=(ts->touch_data[3]<<24)|(ts->touch_data[2]<<16)
         |(ts->touch_data[1]<<8)|(ts->touch_data[0]);
@@ -766,6 +786,7 @@ static void gslX680_ts_worker(struct work_struct *work)
             id = ts->touch_data[ts->dd->id_index + 4 * i] >> 4;
         }
 #endif
+        // dev_err(&ts->client->dev, "finger_calced:%d x:%d,y:%d,id:%d\n", i,x,y,id);
         if(1 <=id && id <= MAX_CONTACTS)
         {
 #ifdef FILTER_POINT
@@ -801,14 +822,21 @@ static void gslX680_ts_worker(struct work_struct *work)
     input_sync(ts->input);
 
 schedule:
+    // // if(0 != touches){
+        // if(touches)
+        //     dev_err(&ts->client->dev, "got touch\n");
+        
+        // queue_work(ts->wq, &ts->work);
+        //msleep(1);
+    // }else
     enable_irq(ts->irq);
-
+    // dev_err(&ts->client->dev, "irq en\n");
 }
 
 static irqreturn_t gsl_ts_irq(int irq, void *dev_id)
 {
     struct gsl_ts *ts = dev_id;
-
+    // dev_err(&ts->client->dev, "irq disable\n");
     disable_irq_nosync(ts->irq);
 
     if (!work_pending(&ts->work))
@@ -837,6 +865,11 @@ static int gslX680_ts_init(struct i2c_client *client, struct gsl_ts *ts)
         pr_err("%s: Unable to allocate memory\n", __func__);
         return -ENOMEM;
     }
+    // ts->touch_data2 = kzalloc(ts->dd->data_size, GFP_KERNEL);
+    // if (!ts->touch_data2) {
+    //     pr_err("%s: Unable to allocate memory\n", __func__);
+    //     return -ENOMEM;
+    // }
 
     input_device = input_allocate_device();
     if (!input_device) {
@@ -903,6 +936,7 @@ static int gsl_ts_suspend(struct device *dev)
     int i;
 #endif
 #endif
+    dev_err(&(ts->client->dev), "gsl_ts_suspend\n");
 
     disable_irq_nosync(ts->irq);
     gslX680_shutdown_low();
@@ -975,10 +1009,11 @@ static void  gsl_resume_work(struct work_struct *work)
     int i;
 #endif
 #endif
+    dev_err(&(ts->client->dev), "gsl_resume_work\n");
     gslX680_shutdown_high();
     msleep(20);
-    //reset_chip(ts->client);
-    //startup_chip(ts->client);
+    // reset_chip(ts->client);
+    // startup_chip(ts->client);
     check_mem_data(ts->client);
     check_mem_data(ts->client);
 
@@ -1111,6 +1146,8 @@ static int  gsl_ts_probe(struct i2c_client *client,
 #endif
 
     gpio_set_value(ts->irq_pin, 0);
+    // gpio_direction_output(ts->irq_pin, 1);
+    // gpio_direction_input(ts->irq_pin);
     enable_irq(ts->irq);
 
     ts->tp.tp_resume = gsl_ts_late_resume;

@@ -3480,6 +3480,7 @@ MODULE_DEVICE_TABLE(of, dw_hdmi_rockchip_dt_ids);
 static int dw_hdmi_rockchip_bind(struct device *dev, struct device *master,
 				 void *data)
 {
+	return 0;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct drm_device *drm = data;
 	struct drm_encoder *encoder;

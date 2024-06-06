@@ -1956,6 +1956,7 @@ int dhdpcie_oob_intr_register(dhd_bus_t *bus)
 			return err;
 		}
 #if defined(DISABLE_WOWLAN)
+asdfhasijkfhskfh
 		printf("%s: disable_irq_wake\n", __FUNCTION__);
 		dhdpcie_osinfo->oob_irq_wake_enabled = FALSE;
 #else

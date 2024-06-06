@@ -36,6 +36,7 @@ DllUnload( )
     return STATUS_SUCCESS;
 }
 */
+// #include <linux/printk.h>
 //#define	GESTURE_ABLE	1
 #define	GESTURE_LICH	1
 
@@ -2661,9 +2662,9 @@ void gsl_alg_id_main(struct gsl_touch_info *cinfo)
 		cinfo->finger_num = 0;
 		return;
 	}
-	PressureSave();
-	PointCoor();
-	CoordinateCorrect();
+	PressureSave();//pressure_now里记录pressure
+	PointCoor();//point_now保留FLAG_COOR(EX) | FLAG_KEY | FLAG_ABLE状态
+	CoordinateCorrect();//坐标矫正
 	PointEdge();
 	PointRepeat();
 	GetPointNum(point_now);
